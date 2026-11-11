@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "AILauncher",
+    name: "AIGENT",
     platforms: [.macOS(.v14)],
-    targets: [.executableTarget(name: "AILauncher", path: "Sources/AILauncher")]
+    targets: [.executableTarget(name: "AIGENT", path: "Sources/AIGENT")]
 )

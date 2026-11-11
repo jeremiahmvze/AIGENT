@@ -56,7 +56,7 @@ func run(_ tool: String, _ args: [String]) throws -> Data {
     return data
 }
 
-func failure(_ message: String) -> NSError { NSError(domain: "AILauncher", code: 1, userInfo: [NSLocalizedDescriptionKey: message]) }
+func failure(_ message: String) -> NSError { NSError(domain: "AIGENT", code: 1, userInfo: [NSLocalizedDescriptionKey: message]) }
 func slug(_ s: String) -> String { s.lowercased().map { $0.isLetter || $0.isNumber ? String($0) : "-" }.joined() }
 func shQuote(_ s: String) -> String { "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'" }
 
@@ -175,6 +175,7 @@ func buildProfile(source: URL, name: String, dataDir existingDataDir: URL? = nil
     let plistURL = tmp.appendingPathComponent("Contents/Info.plist")
     let plist = NSMutableDictionary(contentsOf: plistURL)!
     let realExec = plist["CFBundleExecutable"] as! String
+    // Prefix kept from the old name: changing it would reset each profile's Keychain/privacy approvals.
     plist["CFBundleIdentifier"] = "local.ailauncher.\(slug(srcName)).\(slug(name))"
     plist["CFBundleDisplayName"] = display   // CFBundleName stays: Electron finds its helpers by it
     plist["CFBundleExecutable"] = "ail-launch"

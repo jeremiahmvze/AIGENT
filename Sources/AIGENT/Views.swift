@@ -267,7 +267,7 @@ struct SettingsView: View {
     }
 }
 
-struct AILauncherApp: App {
+struct AIGENTApp: App {
     var body: some Scene {
         Window("AIGENT", id: "main") { ContentView() }
             .defaultSize(width: 560, height: 560)

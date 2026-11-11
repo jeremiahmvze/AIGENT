@@ -8,7 +8,7 @@ OUT="build/AIGENT.app"
 
 swift build -c release
 rm -rf build && mkdir -p "$OUT/Contents/MacOS" "$OUT/Contents/Resources"
-cp "$(swift build -c release --show-bin-path)/AILauncher" "$OUT/Contents/MacOS/AIGENT"
+cp "$(swift build -c release --show-bin-path)/AIGENT" "$OUT/Contents/MacOS/AIGENT"
 strip -S -x "$OUT/Contents/MacOS/AIGENT"  # drops debug paths (they include the builder's home folder)
 "$OUT/Contents/MacOS/AIGENT" --write-app-icon "$OUT/Contents/Resources/AppIcon.icns"
 
@@ -17,7 +17,7 @@ cat > "$OUT/Contents/Info.plist" <<EOF
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>CFBundleExecutable</key><string>AIGENT</string>
-  <key>CFBundleIdentifier</key><string>local.ailauncher</string><!-- kept from the AI Launcher name so settings and favorites carry over -->
+  <key>CFBundleIdentifier</key><string>local.aigent</string>
   <key>CFBundleName</key><string>AIGENT</string>
   <key>CFBundleDisplayName</key><string>AIGENT</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
@@ -47,6 +47,7 @@ pkill -x "AIGENT" 2>/dev/null && sleep 1 || true
 # Pre-rename install: quit it and move it to the Trash.
 if [ -d "/Applications/AI Launcher.app" ]; then
   pkill -x "AI Launcher" 2>/dev/null && sleep 1 || true
+  defaults export local.ailauncher - 2>/dev/null | defaults import local.aigent - 2>/dev/null || true  # keep favorites/settings
   mv "/Applications/AI Launcher.app" ~/.Trash/"AI Launcher $(date +%s).app"
 fi
 rm -rf "$APP" && mv "$OUT" "$APP"

@@ -22,7 +22,7 @@ Requires macOS 14+ on Apple Silicon, plus Claude and/or ChatGPT in `/Application
    **System Settings → Privacy & Security** and click **Open Anyway**.
 
 ## Build from source
-    swift build && .build/debug/AILauncher --self-test   # quick check
+    swift build && .build/debug/AIGENT --self-test   # quick check
     ./build.sh                                           # build, sign, install to /Applications
     ./build.sh --release                                 # ad-hoc signed .dmg in build/
 

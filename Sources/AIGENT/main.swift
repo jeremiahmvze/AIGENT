@@ -37,4 +37,4 @@ if let a = arg("--write-app-icon") {
     cli { try writeIcns(renderAppIcon(), to: URL(fileURLWithPath: a[0])) }
 }
 
-AILauncherApp.main()
+AIGENTApp.main()

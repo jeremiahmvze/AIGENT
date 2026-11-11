@@ -1,25 +1,25 @@
 #!/bin/bash
-# Builds and installs /Applications/AI Launcher.app
+# Builds and installs /Applications/AIGENT.app
 set -euo pipefail
 cd "$(dirname "$0")"
 VERSION="1.1"
-APP="/Applications/AI Launcher.app"
-OUT="build/AI Launcher.app"
+APP="/Applications/AIGENT.app"
+OUT="build/AIGENT.app"
 
 swift build -c release
 rm -rf build && mkdir -p "$OUT/Contents/MacOS" "$OUT/Contents/Resources"
-cp "$(swift build -c release --show-bin-path)/AILauncher" "$OUT/Contents/MacOS/AI Launcher"
-strip -S -x "$OUT/Contents/MacOS/AI Launcher"  # drops debug paths (they include the builder's home folder)
-"$OUT/Contents/MacOS/AI Launcher" --write-app-icon "$OUT/Contents/Resources/AppIcon.icns"
+cp "$(swift build -c release --show-bin-path)/AILauncher" "$OUT/Contents/MacOS/AIGENT"
+strip -S -x "$OUT/Contents/MacOS/AIGENT"  # drops debug paths (they include the builder's home folder)
+"$OUT/Contents/MacOS/AIGENT" --write-app-icon "$OUT/Contents/Resources/AppIcon.icns"
 
 cat > "$OUT/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-  <key>CFBundleExecutable</key><string>AI Launcher</string>
-  <key>CFBundleIdentifier</key><string>local.ailauncher</string>
-  <key>CFBundleName</key><string>AI Launcher</string>
-  <key>CFBundleDisplayName</key><string>AI Launcher</string>
+  <key>CFBundleExecutable</key><string>AIGENT</string>
+  <key>CFBundleIdentifier</key><string>local.ailauncher</string><!-- kept from the AI Launcher name so settings and favorites carry over -->
+  <key>CFBundleName</key><string>AIGENT</string>
+  <key>CFBundleDisplayName</key><string>AIGENT</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
@@ -37,11 +37,18 @@ SIGNER="-"; security find-certificate -c "AI Launcher Local" >/dev/null 2>&1 && 
 [ "${1:-}" = "--release" ] && SIGNER="-"
 codesign --force --sign "$SIGNER" "$OUT"
 if [ "${1:-}" = "--release" ]; then
-  ditto -c -k --keepParent "$OUT" "build/AI-Launcher-$VERSION.zip"
-  echo "Built build/AI-Launcher-$VERSION.zip"; exit 0
+  # Drag-to-install disk image: the app plus an Applications shortcut.
+  mkdir -p build/dmg && mv "$OUT" build/dmg/ && ln -s /Applications build/dmg/Applications
+  hdiutil create -volname "AIGENT" -srcfolder build/dmg -fs HFS+ -format UDZO -ov "build/AIGENT-$VERSION.dmg" >/dev/null
+  echo "Built build/AIGENT-$VERSION.dmg"; exit 0
 fi
 
-pkill -x "AI Launcher" 2>/dev/null && sleep 1 || true
+pkill -x "AIGENT" 2>/dev/null && sleep 1 || true
+# Pre-rename install: quit it and move it to the Trash.
+if [ -d "/Applications/AI Launcher.app" ]; then
+  pkill -x "AI Launcher" 2>/dev/null && sleep 1 || true
+  mv "/Applications/AI Launcher.app" ~/.Trash/"AI Launcher $(date +%s).app"
+fi
 rm -rf "$APP" && mv "$OUT" "$APP"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP"
 echo "Installed $APP (signed: $SIGNER)"

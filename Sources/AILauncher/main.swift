@@ -1,4 +1,4 @@
-// AI Launcher: run several signed-in copies ("profiles") of Electron AI apps side by side.
+// AIGENT: run several signed-in copies ("profiles") of Electron AI apps side by side.
 import AppKit
 
 // Command-line mode (used by profile wrappers after the real app updates, and by build.sh).

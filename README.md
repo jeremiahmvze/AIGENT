@@ -1,4 +1,4 @@
-# AIGENT – AI Launcher (beta)
+# AIGENT (beta)
 
 A small macOS app for running several separately signed-in copies of **Claude** and **ChatGPT**
 desktop at the same time. Each copy ("profile") is a real app with its own Dock icon, name,
@@ -16,15 +16,15 @@ profile icons (badge, color, image), and Restart / Update buttons on each row.
 ## Install
 Requires macOS 14+ on Apple Silicon, plus Claude and/or ChatGPT in `/Applications`.
 
-1. Download `AI-Launcher-*.zip` from [Releases](../../releases), unzip it, and move
-   **AI Launcher.app** to `/Applications`. It must live there, because profiles use it to update.
+1. Download `AIGENT-*.dmg` from [Releases](../../releases), open it, and drag **AIGENT** onto
+   **Applications**. It must live there, because profiles use it to update.
 2. The beta isn't notarized, so the first time you open it, macOS blocks it. To allow it, go to
    **System Settings → Privacy & Security** and click **Open Anyway**.
 
 ## Build from source
     swift build && .build/debug/AILauncher --self-test   # quick check
     ./build.sh                                           # build, sign, install to /Applications
-    ./build.sh --release                                 # ad-hoc signed zip in build/
+    ./build.sh --release                                 # ad-hoc signed .dmg in build/
 
 ### Keeping permissions across rebuilds (optional)
 Profiles are ad-hoc signed by default, so macOS can ask for Keychain/privacy approvals again after

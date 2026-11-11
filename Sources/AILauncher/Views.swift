@@ -269,7 +269,7 @@ struct SettingsView: View {
 
 struct AILauncherApp: App {
     var body: some Scene {
-        Window("AI Launcher", id: "main") { ContentView() }
+        Window("AIGENT", id: "main") { ContentView() }
             .defaultSize(width: 560, height: 560)
         Settings { SettingsView() }
     }

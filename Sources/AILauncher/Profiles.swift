@@ -6,8 +6,8 @@ let fm = FileManager.default
 let home = fm.homeDirectoryForCurrentUser
 let profilesDir = home.appendingPathComponent("Applications/AI Profiles")
 let supportDir = home.appendingPathComponent("Library/Application Support")
-let iconsDir = supportDir.appendingPathComponent("AI Launcher/Icons")
-let launcherBinary = "/Applications/AI Launcher.app/Contents/MacOS/AI Launcher"
+let iconsDir = supportDir.appendingPathComponent("AIGENT/Icons")
+let launcherBinary = "/Applications/AIGENT.app/Contents/MacOS/AIGENT"
 let signingCert = "AI Launcher Local"
 // ponytail: hardcoded list; add an entry for any other Electron app (Gemini, Perplexity...).
 let knownApps = ["Claude", "ChatGPT"]
@@ -101,7 +101,7 @@ func renderIcon(source: URL, look: Look) -> NSImage {
     }
 }
 
-/// AI Launcher's own icon: a violet squircle holding a 2×2 grid of app tiles, one lit up.
+/// AIGENT's own icon: a violet squircle holding a 2×2 grid of app tiles, one lit up.
 func renderAppIcon() -> NSImage {
     NSImage(size: NSSize(width: 1024, height: 1024), flipped: false) { rect in
         let tile = rect.insetBy(dx: 100, dy: 100)
@@ -196,7 +196,7 @@ func buildProfile(source: URL, name: String, dataDir existingDataDir: URL? = nil
     try writeIcns(renderIcon(source: source, look: look), to: tmp.appendingPathComponent("Contents/Resources/profile.icns"))
 
     // Wrapper: rebuild if the real app updated, otherwise start the real app with this profile's data folder.
-    // claude-config is Multi-Claude's isolated Claude Code dir (used by Archive - Development).
+    // claude-config: optional isolated Claude Code config dir (e.g. one migrated from another tool).
     let macOS = tmp.appendingPathComponent("Contents/MacOS")
     let script = """
     #!/bin/bash

@@ -5,7 +5,8 @@
 - [x] Launch All / Close All toolbar buttons (Close All asks first, then quits normally).
 - [x] Collapsible sections (Favorites, Apps, Profiles); collapsed state is remembered.
 - [x] Favorites at the top: right-click → Add to Favorites; drag to reorder.
-- [x] Custom profile icons: app icon + 1–2 character/emoji badge, a full emoji/letter tile, or a custom image.
+- [x] Custom profile icons: an emoji or letter shown as a badge on the app icon or as the whole icon,
+      picked from a Reminders-style emoji grid (or the full system picker); or a custom image.
 - [x] Icons stay inside the macOS icon shape, so macOS doesn't shrink them into a grey frame.
 - [x] Per-row Restart (running) and Update (source app updated) buttons.
 - [x] Profiles rebuild themselves after the source app updates.

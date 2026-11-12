@@ -175,6 +175,11 @@ struct ContentView: View {
 
 // MARK: Edit name & icon
 
+let quickEmoji = ["💼", "🏠", "💻", "🧪", "🛠️", "📚", "🎓", "🧠", "💡", "🚀",
+                  "⭐️", "❤️", "🔥", "⚡️", "🌙", "☀️", "🌈", "🌊", "🌲", "🍀",
+                  "🐶", "🐱", "🦊", "🐻", "🐼", "🦉", "🐙", "🦄", "🤖", "👾",
+                  "🎨", "🎵", "🎮", "📷", "✈️", "💰", "📈", "🏋️", "🛒", "🔒"]
+
 struct ProfileEditor: View {
     let profile: Profile
     let save: (String, Look) -> Void
@@ -210,18 +215,18 @@ struct ProfileEditor: View {
                     .accessibilityLabel("Icon preview")
                 Form {
                     TextField("Name", text: $name)
-                    Picker("Icon", selection: $glyph) {
-                        Text("App + Badge").tag(false)
-                        Text("Emoji or Letter").tag(true)
-                    }.pickerStyle(.segmented)
                     HStack {
-                        TextField(glyph ? "Emoji or letter" : "Badge", text: $badge, prompt: Text(glyph ? "1 character" : "1–2 characters, or empty"))
+                        TextField("Emoji or letter", text: $badge, prompt: Text(glyph ? "1 character" : "1–2 characters, or empty"))
                             .focused($badgeFocused)
                             .onChange(of: badge) { _, v in if v.count > maxBadge { badge = String(v.suffix(maxBadge)) } }
                             .onChange(of: glyph) { _, _ in if badge.count > maxBadge { badge = String(badge.prefix(maxBadge)) } }
-                        Button("Emoji…") { badgeFocused = true; DispatchQueue.main.async { NSApp.orderFrontCharacterPalette(nil) } }
-                            .help("Open the emoji picker (or press fn/🌐 E)")
+                        Button("More…") { badgeFocused = true; DispatchQueue.main.async { NSApp.orderFrontCharacterPalette(nil) } }
+                            .help("All emoji and symbols (or press fn/🌐 E)")
                     }
+                    Picker("Show as", selection: $glyph) {
+                        Text("Badge").tag(false)
+                        Text("Whole Icon").tag(true)
+                    }.pickerStyle(.segmented)
                     ColorPicker(glyph ? "Background" : "Badge color", selection: $color, supportsOpacity: false)
                     HStack(spacing: 6) {
                         ForEach(palette, id: \.self) { hex in
@@ -236,6 +241,15 @@ struct ProfileEditor: View {
                             if imagePath != nil { Button("Use App Icon") { imagePath = nil } }
                         }
                     }
+                }
+            }
+            // Reminders-style quick picker.
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(40), spacing: 8), count: 10), spacing: 8) {
+                ForEach(quickEmoji, id: \.self) { e in
+                    Button { badge = e } label: {
+                        Text(e).font(.system(size: 22)).frame(width: 40, height: 40)
+                            .background(Circle().fill(badge == e ? Color.accentColor.opacity(0.3) : Color.secondary.opacity(0.12)))
+                    }.buttonStyle(.plain).accessibilityLabel("Use \(e)")
                 }
             }
             if let error { Text(error).foregroundStyle(.red).font(.caption) }

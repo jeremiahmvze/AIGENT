@@ -1,6 +1,6 @@
 # AIGENT (beta)
 
-A small macOS app for running several separately signed-in copies of **Claude** and **ChatGPT**
+A small and completely vibe-coded macOS app for running several separately signed-in copies of **Claude** and **ChatGPT** (more OTW)
 desktop at the same time. Each copy ("profile") is a real app with its own Dock icon, name,
 windows and sign-in. No overlays or borders, and no extra Dock icons.
 

@@ -14,8 +14,28 @@
 - [x] Profiles rebuild themselves after the source app updates.
 - [x] Settings: Open at Login, include default apps in Launch All / Close All.
 
+## Planned
+### Import existing data
+On first launch, and when adding the first profile for a service, ask whether to bring over data
+from what's already installed (desktop sign-in, Claude Code tab sessions, local app state).
+- Detect every existing data folder for that service: the default app's
+  (`~/Library/Application Support/Claude`, ChatGPT/Codex folders) plus ones left by other tools
+  (e.g. Multi-Claude's `<App>-<Name>` folders).
+- If there's more than one, list them all with checkboxes; each one checked becomes its own profile.
+- Copy with an APFS clone (near-zero disk) and leave the original untouched, so the default app keeps
+  working. Ask the user to quit the source app first so the copy is consistent.
+- Expect one Keychain prompt per imported profile (the copied sign-in is encrypted with the app's
+  Keychain key); say so in the dialog.
+- Also offer it later from the Add Profile row ("Import from…"), not only on first run.
+
+### More services
+- Perplexity first, then other popular desktop AI apps (e.g. Gemini if a desktop app exists).
+- Check each app's build before adding it: Electron apps take `--user-data-dir` and drop straight
+  into `knownApps` in `Profiles.swift`. Native (Swift) apps don't, so they need a different way to
+  keep data separate, or can't be supported.
+- Show only services that are installed (already how Claude/ChatGPT work).
+
 ## Ideas
-- More Electron apps (Gemini, Perplexity, …) – add to `knownApps` in `Profiles.swift`.
 - Universal (Intel + Apple Silicon) release build.
 - Notarized release, so Gatekeeper doesn't warn.
 

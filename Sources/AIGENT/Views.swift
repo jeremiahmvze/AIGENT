@@ -86,7 +86,7 @@ struct ContentView: View {
                 .resizable().frame(width: 32, height: 32)
             VStack(alignment: .leading) {
                 Text(profile?.name ?? url.deletingPathExtension().lastPathComponent)
-                Text(profile.map { $0.source.deletingPathExtension().lastPathComponent + ($0.isCurrent ? "" : " · update pending") } ?? "Default profile")
+                Text(profile.map { $0.source.deletingPathExtension().lastPathComponent + ($0.isCurrent ? "" : " · update pending") + ($0.pending == nil ? "" : " · changes apply on restart") } ?? "Default profile")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
@@ -96,7 +96,7 @@ struct ContentView: View {
                     .help("Rebuild from the newly installed \(p.source.deletingPathExtension().lastPathComponent)" + (isOn ? " (quits and reopens it)" : ""))
             }
             if isOn {
-                Button("Restart") { work("Restarting…") { try quitAndWait(url); open(url) } }
+                Button("Restart") { work("Restarting…") { try quitAndWait(url); open(try profile.flatMap { $0.pending == nil ? nil : try update($0) } ?? url) } }
                     .help("Quit and reopen")
             }
             Button(isOn ? "Show" : "Launch") { open(url) }
@@ -189,6 +189,7 @@ struct ProfileEditor: View {
     @State private var color: Color
     @State private var imagePath: String?
     @State private var glyph: Bool
+    @State private var framed: Bool
     @State private var error: String?
     @FocusState private var badgeFocused: Bool
 
@@ -200,10 +201,11 @@ struct ProfileEditor: View {
         _color = State(initialValue: Color(nsColor: NSColor(hex: look.color) ?? .systemBlue))
         _imagePath = State(initialValue: look.imagePath)
         _glyph = State(initialValue: look.glyph)
+        _framed = State(initialValue: look.framed)
     }
 
     private var maxBadge: Int { glyph ? 1 : 2 }
-    private var look: Look { Look(badge: String(badge.prefix(maxBadge)), color: NSColor(color).hex, imagePath: imagePath, glyph: glyph) }
+    private var look: Look { Look(badge: String(badge.prefix(maxBadge)), color: NSColor(color).hex, imagePath: imagePath, glyph: glyph, framed: framed) }
     private var cleanName: String { name.trimmingCharacters(in: .whitespaces) }
 
     var body: some View {
@@ -226,6 +228,10 @@ struct ProfileEditor: View {
                     Picker("Show as", selection: $glyph) {
                         Text("Badge").tag(false)
                         Text("Whole Icon").tag(true)
+                    }.pickerStyle(.segmented)
+                    Picker("Size", selection: $framed) {
+                        Text("Full Size").tag(false)
+                        Text("Framed").tag(true)
                     }.pickerStyle(.segmented)
                     ColorPicker(glyph ? "Background" : "Badge color", selection: $color, supportsOpacity: false)
                     HStack(spacing: 6) {
@@ -253,7 +259,7 @@ struct ProfileEditor: View {
                 }
             }
             if let error { Text(error).foregroundStyle(.red).font(.caption) }
-            Text("Saving rebuilds the profile. Sign-in and sessions stay the same; quit it first if it's running.")
+            Text("Sign-in and sessions stay the same. If the profile is running, changes apply the next time it starts (or click Restart).")
                 .font(.caption).foregroundStyle(.secondary)
             HStack {
                 Spacer()

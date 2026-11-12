@@ -7,6 +7,8 @@
 - [x] Favorites at the top: right-click → Add to Favorites; drag to reorder.
 - [x] Custom profile icons: an emoji or letter shown as a badge on the app icon or as the whole icon,
       picked from a Reminders-style emoji grid (or the full system picker); or a custom image.
+- [x] Full Size or Framed icons.
+- [x] Edits to a running profile are queued and applied when it restarts.
 - [x] Icons stay inside the macOS icon shape, so macOS doesn't shrink them into a grey frame.
 - [x] Per-row Restart (running) and Update (source app updated) buttons.
 - [x] Profiles rebuild themselves after the source app updates.

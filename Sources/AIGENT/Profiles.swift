@@ -19,10 +19,19 @@ struct Look: Equatable {
     var color: String        // badge color, "#RRGGBB"
     var imagePath: String?   // custom base image instead of the app's icon
     var glyph = false        // true: the whole icon is `badge` (an emoji or letter) on a `color` tile
+    var framed = false       // true: shrink the icon into a grey frame (the look macOS gives legacy icons)
 
     static func defaults(for name: String) -> Look {
         let idx = name.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xffff } % palette.count
         return Look(badge: String(name.first(where: { $0.isLetter || $0.isNumber }) ?? "?").uppercased(), color: palette[idx])
+    }
+
+    /// Info.plist (or queued-change) keys. AILImage is always written ("" = none) so merges can clear it.
+    var plist: [String: Any] { ["AILBadge": badge, "AILColor": color, "AILImage": imagePath ?? "", "AILGlyph": glyph, "AILFramed": framed] }
+    static func from(_ i: [String: Any], name: String) -> Look {
+        let d = defaults(for: name), img = i["AILImage"] as? String ?? ""
+        return Look(badge: i["AILBadge"] as? String ?? d.badge, color: i["AILColor"] as? String ?? d.color, imagePath: img.isEmpty ? nil : img,
+                    glyph: i["AILGlyph"] as? Bool ?? false, framed: i["AILFramed"] as? Bool ?? false)
     }
 }
 
@@ -34,11 +43,10 @@ struct Profile: Identifiable, Hashable {
     var source: URL { URL(fileURLWithPath: info["AILSource"] as? String ?? "") }
     var dataDir: URL { URL(fileURLWithPath: info["AILDataDir"] as? String ?? "") }
     var isCurrent: Bool { (info["AILSourceVersion"] as? String) == version(of: source) }
-    var look: Look {
-        let i = info, d = Look.defaults(for: name)
-        return Look(badge: i["AILBadge"] as? String ?? d.badge, color: i["AILColor"] as? String ?? d.color, imagePath: i["AILImage"] as? String,
-                    glyph: i["AILGlyph"] as? Bool ?? false)
-    }
+    var look: Look { .from(info, name: name) }
+    /// Changes saved while the profile was running; applied on its next launch (or Restart).
+    var pendingURL: URL { dataDir.appendingPathComponent(".aigent-pending.plist") }
+    var pending: [String: Any]? { NSDictionary(contentsOf: pendingURL) as? [String: Any] }
 }
 
 func version(of app: URL) -> String? {
@@ -81,6 +89,14 @@ extension NSColor {
 func renderIcon(source: URL, look: Look) -> NSImage {
     let base = look.imagePath.flatMap { NSImage(contentsOfFile: $0) } ?? NSWorkspace.shared.icon(forFile: source.path)
     return NSImage(size: NSSize(width: 1024, height: 1024), flipped: false) { rect in
+        if look.framed {
+            // Drawn ourselves (not left to macOS) so it looks the same on every macOS version.
+            var inner = look; inner.framed = false
+            NSGradient(starting: NSColor(white: 0.30, alpha: 1), ending: NSColor(white: 0.16, alpha: 1))!
+                .draw(in: NSBezierPath(roundedRect: rect.insetBy(dx: 100, dy: 100), xRadius: 185, yRadius: 185), angle: -90)
+            renderIcon(source: source, look: inner).draw(in: rect.insetBy(dx: 176, dy: 176))
+            return true
+        }
         if look.glyph {
             let tile = rect.insetBy(dx: 100, dy: 100)
             (NSColor(hex: look.color) ?? .systemBlue).setFill()
@@ -204,26 +220,25 @@ func buildProfile(source: URL, name: String, dataDir existingDataDir: URL? = nil
     plist["AILSource"] = source.path
     plist["AILSourceVersion"] = version(of: source) ?? ""
     plist["AILDataDir"] = dataDir.path
-    plist["AILBadge"] = look.badge
-    plist["AILColor"] = look.color
-    if let img = look.imagePath { plist["AILImage"] = img }
-    plist["AILGlyph"] = look.glyph
+    plist.addEntries(from: look.plist)
     plist.write(to: plistURL, atomically: true)
 
     try writeIcns(renderIcon(source: source, look: look), to: tmp.appendingPathComponent("Contents/Resources/profile.icns"))
 
-    // Wrapper: rebuild if the real app updated, otherwise start the real app with this profile's data folder.
+    // Wrapper: rebuild if the real app updated or changes are queued, otherwise start the real app with this profile's data folder.
     // claude-config: optional isolated Claude Code config dir (e.g. one migrated from another tool).
     let macOS = tmp.appendingPathComponent("Contents/MacOS")
     let script = """
     #!/bin/bash
     here="$(cd "$(dirname "$0")/../.." && pwd)"
+    data=\(shQuote(dataDir.path))
     v=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" \(shQuote(source.path))/Contents/Info.plist 2>/dev/null)
-    if [ -n "$v" ] && [ "$v" != \(shQuote(version(of: source) ?? "")) ] && [ -x \(shQuote(launcherBinary)) ]; then
+    stale=; [ -n "$v" ] && [ "$v" != \(shQuote(version(of: source) ?? "")) ] && stale=1
+    [ -f "$data/.aigent-pending.plist" ] && stale=1
+    if [ -n "$stale" ] && [ -x \(shQuote(launcherBinary)) ]; then
       \(shQuote(launcherBinary)) --rebuild "$here" --open >/dev/null 2>&1 &
       exit 0
     fi
-    data=\(shQuote(dataDir.path))
     [ -d "$data/claude-config" ] && export CLAUDE_CONFIG_DIR="$data/claude-config"
     # Start the app as its own process (not exec) so macOS tracks its pid; exec breaks NSRunningApplication.
     "$(dirname "$0")/\(realExec)" --user-data-dir="$data" "$@" </dev/null >/dev/null 2>&1 &
@@ -257,8 +272,18 @@ func buildProfile(source: URL, name: String, dataDir existingDataDir: URL? = nil
 /// the old one goes to the Trash and its favorite slot moves to the new one.
 @discardableResult
 func update(_ p: Profile, name: String? = nil, look: Look? = nil) throws -> URL {
-    if isRunning(p.url) != nil { throw failure("Quit “\(p.name)” first, then try again.") }
-    let url = try buildProfile(source: p.source, name: name ?? p.name, dataDir: p.dataDir, look: look ?? p.look)
+    var queued = p.pending ?? [:]
+    if isRunning(p.url) != nil {
+        // Can't swap a running app's bundle: queue the change for its next launch.
+        if let name { queued["AILName"] = name }
+        if let look { queued.merge(look.plist) { $1 } }
+        try (queued as NSDictionary).write(to: p.pendingURL)
+        return p.url
+    }
+    let name = name ?? queued["AILName"] as? String ?? p.name
+    let look = look ?? Look.from(p.info.merging(queued) { $1 }, name: name)
+    let url = try buildProfile(source: p.source, name: name, dataDir: p.dataDir, look: look)
+    try? fm.removeItem(at: p.pendingURL)
     if url.path != p.url.path {
         try fm.trashItem(at: p.url, resultingItemURL: nil)
         Favorites.replace(p.url.path, with: url.path)

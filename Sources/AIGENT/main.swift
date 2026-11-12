@@ -31,6 +31,9 @@ if args.contains("--self-test") {
         assert(Favorites.list("a\nb\n") == ["a", "b"], "favorites parse")
         assert(slug("Archive - Development") == "archive---development", "bundle id slug")
         assert(Look(badge: "🦊", color: "#FF375F", glyph: true).badge.count == 1, "emoji is one character")
+        let l = Look(badge: "🦊", color: "#FF375F", imagePath: nil, glyph: true, framed: true)
+        assert(Look.from(l.plist, name: "x") == l, "look plist round-trip")
+        assert(Look.from(Look(badge: "A", color: "#000000", imagePath: "/a.png").plist.merging(l.plist) { $1 }, name: "x").imagePath == nil, "queued change clears image")
         print("self-test passed")
     }
 }

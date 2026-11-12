@@ -11,7 +11,7 @@ live in `~/Applications/AI Profiles/` and run without the launcher being open. W
 ChatGPT updates, a profile rebuilds itself on its next launch. Sign-ins and data are kept.
 
 Features: Launch All / Close All, Favorites (drag to reorder), collapsible sections, custom
-profile icons (badge, color, image), and Restart / Update buttons on each row.
+profile icons (app icon with a badge, an emoji or letter tile, or your own image), and Restart / Update buttons on each row.
 
 ## Install
 Requires macOS 14+ on Apple Silicon, plus Claude and/or ChatGPT in `/Applications`.

@@ -18,6 +18,7 @@ struct Look: Equatable {
     var badge: String        // 0–2 characters; empty = no badge
     var color: String        // badge color, "#RRGGBB"
     var imagePath: String?   // custom base image instead of the app's icon
+    var glyph = false        // true: the whole icon is `badge` (an emoji or letter) on a `color` tile
 
     static func defaults(for name: String) -> Look {
         let idx = name.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xffff } % palette.count
@@ -35,7 +36,8 @@ struct Profile: Identifiable, Hashable {
     var isCurrent: Bool { (info["AILSourceVersion"] as? String) == version(of: source) }
     var look: Look {
         let i = info, d = Look.defaults(for: name)
-        return Look(badge: i["AILBadge"] as? String ?? d.badge, color: i["AILColor"] as? String ?? d.color, imagePath: i["AILImage"] as? String)
+        return Look(badge: i["AILBadge"] as? String ?? d.badge, color: i["AILColor"] as? String ?? d.color, imagePath: i["AILImage"] as? String,
+                    glyph: i["AILGlyph"] as? Bool ?? false)
     }
 }
 
@@ -73,10 +75,23 @@ extension NSColor {
 
 // MARK: Icons
 
-/// The profile icon: app icon (or custom image) with an optional colored badge. Drawn lazily at any size.
+/// The profile icon: app icon (or custom image) with an optional colored badge, or a big emoji/letter tile.
+/// Everything stays inside the standard icon shape (824 pt tile in a 1024 canvas); anything sticking out
+/// makes macOS treat it as a legacy icon and shrink it into a grey frame.
 func renderIcon(source: URL, look: Look) -> NSImage {
     let base = look.imagePath.flatMap { NSImage(contentsOfFile: $0) } ?? NSWorkspace.shared.icon(forFile: source.path)
     return NSImage(size: NSSize(width: 1024, height: 1024), flipped: false) { rect in
+        if look.glyph {
+            let tile = rect.insetBy(dx: 100, dy: 100)
+            (NSColor(hex: look.color) ?? .systemBlue).setFill()
+            NSBezierPath(roundedRect: tile, xRadius: 185, yRadius: 185).fill()
+            let text = look.badge.isEmpty ? "?" : look.badge
+            let size: CGFloat = text.count > 1 ? 340 : 500
+            let str = NSAttributedString(string: text, attributes: [.font: NSFont.systemFont(ofSize: size, weight: .bold), .foregroundColor: NSColor.white])
+            let s = str.size()
+            str.draw(at: NSPoint(x: tile.midX - s.width / 2, y: tile.midY - s.height / 2))
+            return true
+        }
         if look.imagePath != nil {
             // Custom images: aspect-fill a standard macOS icon squircle.
             let tile = rect.insetBy(dx: 100, dy: 100)
@@ -90,10 +105,10 @@ func renderIcon(source: URL, look: Look) -> NSImage {
             base.draw(in: rect)
         }
         guard !look.badge.isEmpty else { return true }
-        let badge = NSRect(x: 600, y: 60, width: 380, height: 380)
+        let badge = NSRect(x: 565, y: 139, width: 320, height: 320)  // inside the tile's bottom-right corner
         (NSColor(hex: look.color) ?? .systemBlue).setFill(); NSBezierPath(ovalIn: badge).fill()
-        NSColor.white.setStroke(); let ring = NSBezierPath(ovalIn: badge.insetBy(dx: 10, dy: 10)); ring.lineWidth = 20; ring.stroke()
-        let size: CGFloat = look.badge.count > 1 ? 165 : 230
+        NSColor.white.setStroke(); let ring = NSBezierPath(ovalIn: badge.insetBy(dx: 8, dy: 8)); ring.lineWidth = 16; ring.stroke()
+        let size: CGFloat = look.badge.count > 1 ? 140 : 195
         let str = NSAttributedString(string: look.badge, attributes: [.font: NSFont.systemFont(ofSize: size, weight: .bold), .foregroundColor: NSColor.white])
         let s = str.size()
         str.draw(at: NSPoint(x: badge.midX - s.width / 2, y: badge.midY - s.height / 2))
@@ -192,6 +207,7 @@ func buildProfile(source: URL, name: String, dataDir existingDataDir: URL? = nil
     plist["AILBadge"] = look.badge
     plist["AILColor"] = look.color
     if let img = look.imagePath { plist["AILImage"] = img }
+    plist["AILGlyph"] = look.glyph
     plist.write(to: plistURL, atomically: true)
 
     try writeIcns(renderIcon(source: source, look: look), to: tmp.appendingPathComponent("Contents/Resources/profile.icns"))

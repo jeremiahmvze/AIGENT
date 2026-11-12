@@ -30,6 +30,7 @@ if args.contains("--self-test") {
         assert(Look.defaults(for: "2 Dev").badge == "2" && Look.defaults(for: "").badge == "?", "badge letter")
         assert(Favorites.list("a\nb\n") == ["a", "b"], "favorites parse")
         assert(slug("Archive - Development") == "archive---development", "bundle id slug")
+        assert(Look(badge: "🦊", color: "#FF375F", glyph: true).badge.count == 1, "emoji is one character")
         print("self-test passed")
     }
 }

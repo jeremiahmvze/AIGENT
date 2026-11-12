@@ -183,7 +183,9 @@ struct ProfileEditor: View {
     @State private var badge: String
     @State private var color: Color
     @State private var imagePath: String?
+    @State private var glyph: Bool
     @State private var error: String?
+    @FocusState private var badgeFocused: Bool
 
     init(profile: Profile, save: @escaping (String, Look) -> Void) {
         self.profile = profile; self.save = save
@@ -192,9 +194,11 @@ struct ProfileEditor: View {
         _badge = State(initialValue: look.badge)
         _color = State(initialValue: Color(nsColor: NSColor(hex: look.color) ?? .systemBlue))
         _imagePath = State(initialValue: look.imagePath)
+        _glyph = State(initialValue: look.glyph)
     }
 
-    private var look: Look { Look(badge: String(badge.prefix(2)), color: NSColor(color).hex, imagePath: imagePath) }
+    private var maxBadge: Int { glyph ? 1 : 2 }
+    private var look: Look { Look(badge: String(badge.prefix(maxBadge)), color: NSColor(color).hex, imagePath: imagePath, glyph: glyph) }
     private var cleanName: String { name.trimmingCharacters(in: .whitespaces) }
 
     var body: some View {
@@ -206,9 +210,19 @@ struct ProfileEditor: View {
                     .accessibilityLabel("Icon preview")
                 Form {
                     TextField("Name", text: $name)
-                    TextField("Badge", text: $badge, prompt: Text("1–2 characters, or empty"))
-                        .onChange(of: badge) { _, v in if v.count > 2 { badge = String(v.prefix(2)) } }
-                    ColorPicker("Badge color", selection: $color, supportsOpacity: false)
+                    Picker("Icon", selection: $glyph) {
+                        Text("App + Badge").tag(false)
+                        Text("Emoji or Letter").tag(true)
+                    }.pickerStyle(.segmented)
+                    HStack {
+                        TextField(glyph ? "Emoji or letter" : "Badge", text: $badge, prompt: Text(glyph ? "1 character" : "1–2 characters, or empty"))
+                            .focused($badgeFocused)
+                            .onChange(of: badge) { _, v in if v.count > maxBadge { badge = String(v.suffix(maxBadge)) } }
+                            .onChange(of: glyph) { _, _ in if badge.count > maxBadge { badge = String(badge.prefix(maxBadge)) } }
+                        Button("Emoji…") { badgeFocused = true; DispatchQueue.main.async { NSApp.orderFrontCharacterPalette(nil) } }
+                            .help("Open the emoji picker (or press fn/🌐 E)")
+                    }
+                    ColorPicker(glyph ? "Background" : "Badge color", selection: $color, supportsOpacity: false)
                     HStack(spacing: 6) {
                         ForEach(palette, id: \.self) { hex in
                             Button { color = Color(nsColor: NSColor(hex: hex)!) } label: {
@@ -216,9 +230,11 @@ struct ProfileEditor: View {
                             }.buttonStyle(.plain).accessibilityLabel("Color \(hex)")
                         }
                     }
-                    HStack {
-                        Button("Choose Image…", action: chooseImage)
-                        if imagePath != nil { Button("Use App Icon") { imagePath = nil } }
+                    if !glyph {
+                        HStack {
+                            Button("Choose Image…", action: chooseImage)
+                            if imagePath != nil { Button("Use App Icon") { imagePath = nil } }
+                        }
                     }
                 }
             }

@@ -207,7 +207,8 @@ func buildProfile(source: URL, name: String, dataDir existingDataDir: URL? = nil
     let plist = NSMutableDictionary(contentsOf: plistURL)!
     let realExec = plist["CFBundleExecutable"] as! String
     // Prefix kept from the old name: changing it would reset each profile's Keychain/privacy approvals.
-    plist["CFBundleIdentifier"] = "local.ailauncher.\(slug(srcName)).\(slug(name))"
+    let bundleID = "local.ailauncher.\(slug(srcName)).\(slug(name))"
+    plist["CFBundleIdentifier"] = bundleID
     plist["CFBundleDisplayName"] = display   // CFBundleName stays: Electron finds its helpers by it
     plist["CFBundleExecutable"] = "ail-launch"
     plist["CFBundleIconFile"] = "profile"
@@ -259,7 +260,9 @@ func buildProfile(source: URL, name: String, dataDir existingDataDir: URL? = nil
     // A stable local certificate keeps Keychain/privacy approvals across rebuilds; ad hoc changes every build.
     let signer = (try? run("/usr/bin/security", ["find-certificate", "-c", signingCert])) != nil ? signingCert : "-"
     try run("/usr/bin/codesign", ["--force", "--deep", "--sign", signer, "--preserve-metadata=entitlements", tmp.path])
-    try run("/usr/bin/codesign", ["--force", "--sign", signer, "--entitlements", entFile.path, macOS.appendingPathComponent(realExec).path])
+    // The real binary must carry the profile's bundle ID: macOS privacy checks (Local Network, Accessibility…)
+    // match the running binary's identifier to an app, and silently deny when it doesn't match one.
+    try run("/usr/bin/codesign", ["--force", "--sign", signer, "--identifier", bundleID, "--entitlements", entFile.path, macOS.appendingPathComponent(realExec).path])
     try run("/usr/bin/codesign", ["--force", "--sign", signer, "--entitlements", entFile.path, tmp.path])
 
     if fm.fileExists(atPath: dest.path) { try fm.removeItem(at: dest) }

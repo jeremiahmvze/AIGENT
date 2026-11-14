@@ -96,7 +96,7 @@ struct ContentView: View {
                     .help("Rebuild from the newly installed \(p.source.deletingPathExtension().lastPathComponent)" + (isOn ? " (quits and reopens it)" : ""))
             }
             if isOn {
-                Button("Restart") { work("Restarting…") { try quitAndWait(url); open(try profile.flatMap { $0.pending == nil ? nil : try update($0) } ?? url) } }
+                Button("Restart") { work("Restarting…") { try restart(url) } }
                     .help("Quit and reopen")
             }
             Button(isOn ? "Show" : "Launch") { open(url) }

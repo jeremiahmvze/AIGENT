@@ -174,7 +174,16 @@ func importImage(_ url: URL) throws -> String {
 // MARK: Build
 
 func isRunning(_ url: URL) -> NSRunningApplication? {
-    NSWorkspace.shared.runningApplications.first { $0.bundleURL?.path == url.path }
+    // runningApplications refreshes on the main run loop, so off-main it can still list an app that just
+    // quit; confirm the process is really alive.
+    NSWorkspace.shared.runningApplications.first { $0.bundleURL?.path == url.path && kill($0.processIdentifier, 0) == 0 }
+}
+
+/// Quit, apply any queued changes (rebuild), and reopen. Call off the main thread.
+func restart(_ url: URL) throws {
+    try quitAndWait(url)
+    let p = url.path.hasPrefix(profilesDir.path) ? Profile(url: url) : nil
+    open(try p.flatMap { $0.pending == nil ? nil : try update($0) } ?? url)
 }
 
 /// Normal quit (⌘Q), then wait up to 30 s for the process to exit. Call off the main thread.

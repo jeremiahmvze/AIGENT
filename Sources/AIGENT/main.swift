@@ -20,6 +20,9 @@ if let a = arg("--rebuild") {
 if let a = arg("--add", 2) {
     cli { print(try buildProfile(source: URL(fileURLWithPath: "/Applications/\(a[0]).app"), name: a[1]).path) }
 }
+if let a = arg("--restart") {
+    cli { try restart(URL(fileURLWithPath: a[0])); sleep(2) }
+}
 if let a = arg("--rename", 2) {
     cli { print(try update(Profile(url: URL(fileURLWithPath: a[0])), name: a[1]).path) }
 }

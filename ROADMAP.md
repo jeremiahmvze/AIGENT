@@ -39,6 +39,10 @@ from what's already installed (desktop sign-in, Claude Code tab sessions, local 
 - Universal (Intel + Apple Silicon) release build.
 - Notarized release, so Gatekeeper doesn't warn.
 
+## Fixed
+- Profiles couldn't reach the local network ("No route to host", no Local Network prompt) because
+  cloned binaries shared the original app's UUID. Each profile now gets its own (issue #1).
+
 ## Known issues
 - Profile icons use the macOS app-icon style active when they were built (e.g. Tinted/Clear).
   After changing the system icon style, Rebuild profiles to refresh them.

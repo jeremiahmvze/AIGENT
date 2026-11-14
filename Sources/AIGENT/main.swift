@@ -37,6 +37,12 @@ if args.contains("--self-test") {
         let l = Look(badge: "🦊", color: "#FF375F", imagePath: nil, glyph: true, framed: true)
         assert(Look.from(l.plist, name: "x") == l, "look plist round-trip")
         assert(Look.from(Look(badge: "A", color: "#000000", imagePath: "/a.png").plist.merging(l.plist) { $1 }, name: "x").imagePath == nil, "queued change clears image")
+        let me = URL(fileURLWithPath: CommandLine.arguments[0]), copy = fm.temporaryDirectory.appendingPathComponent("aigent-uuid-test")
+        try? fm.removeItem(at: copy); try fm.copyItem(at: me, to: copy); defer { try? fm.removeItem(at: copy) }
+        func uuid(_ u: URL) throws -> String { String(decoding: try run("/usr/bin/dwarfdump", ["--uuid", u.path]), as: UTF8.self).components(separatedBy: " ")[1] }
+        let before = try uuid(copy); try patchUUID(copy, seed: "x"); let once = try uuid(copy); try patchUUID(copy, seed: "x")
+        let twice = try uuid(copy)
+        assert(before != once && once == twice, "UUID patch changes it, stably")
         print("self-test passed")
     }
 }

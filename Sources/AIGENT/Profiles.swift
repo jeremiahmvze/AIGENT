@@ -1,6 +1,7 @@
 // Profile engine: each profile is an APFS clone of a real Electron app with its own bundle id,
 // icon and --user-data-dir, so it gets its own Dock icon, windows and sign-in.
 import AppKit
+import CryptoKit
 
 let fm = FileManager.default
 let home = fm.homeDirectoryForCurrentUser
@@ -195,6 +196,32 @@ func quitAndWait(_ url: URL) throws {
     if kill(pid, 0) == 0 { throw failure("“\(app.localizedName ?? url.lastPathComponent)” didn't quit (it may be asking to save something).") }
 }
 
+/// Give a Mach-O (thin or universal) new LC_UUIDs derived from `seed`. macOS's Local Network check also looks
+/// the app up by executable UUID; a clone sharing the original's UUID gets mixed up with the original app
+/// and is silently denied. Derived from the bundle ID, so it stays the same across rebuilds.
+func patchUUID(_ file: URL, seed: String) throws {
+    var d = try Data(contentsOf: file)
+    func u32(_ o: Int, big: Bool) -> Int { let v = d[o..<o + 4].withUnsafeBytes { $0.loadUnaligned(as: UInt32.self) }; return Int(big ? v.bigEndian : v) }
+    let magic = u32(0, big: true)
+    let slices: [Int] = magic == 0xcafebabe || magic == 0xcafebabf
+        // fat_arch is 20 bytes (32-bit offset at +8); fat_arch_64 is 32 bytes (64-bit offset at +8, low half at +12).
+        ? (0..<u32(4, big: true)).map { magic == 0xcafebabe ? u32(8 + $0 * 20 + 8, big: true) : u32(8 + $0 * 32 + 12, big: true) }
+        : [0]
+    var patched = 0
+    for base in slices where u32(base, big: false) == 0xfeedfacf { // 64-bit Mach-O
+        var cmd = base + 32
+        for _ in 0..<u32(base + 16, big: false) {
+            if u32(cmd, big: false) == 0x1b { // LC_UUID
+                let uuid = Insecure.MD5.hash(data: Data("\(seed)/\(u32(base + 4, big: false))".utf8))
+                d.replaceSubrange(cmd + 8..<cmd + 24, with: Data(uuid)); patched += 1
+            }
+            cmd += u32(cmd + 4, big: false)
+        }
+    }
+    guard patched > 0 else { throw failure("No LC_UUID found in \(file.lastPathComponent).") }
+    try d.write(to: file)
+}
+
 /// Clone `source` into a profile bundle named `name`. Safe to re-run (used for updates and edits).
 @discardableResult
 func buildProfile(source: URL, name: String, dataDir existingDataDir: URL? = nil, look: Look? = nil) throws -> URL {
@@ -269,6 +296,7 @@ func buildProfile(source: URL, name: String, dataDir existingDataDir: URL? = nil
     // A stable local certificate keeps Keychain/privacy approvals across rebuilds; ad hoc changes every build.
     let signer = (try? run("/usr/bin/security", ["find-certificate", "-c", signingCert])) != nil ? signingCert : "-"
     try run("/usr/bin/codesign", ["--force", "--deep", "--sign", signer, "--preserve-metadata=entitlements", tmp.path])
+    try patchUUID(macOS.appendingPathComponent(realExec), seed: bundleID)
     // The real binary must carry the profile's bundle ID: macOS privacy checks (Local Network, Accessibility…)
     // match the running binary's identifier to an app, and silently deny when it doesn't match one.
     try run("/usr/bin/codesign", ["--force", "--sign", signer, "--identifier", bundleID, "--entitlements", entFile.path, macOS.appendingPathComponent(realExec).path])

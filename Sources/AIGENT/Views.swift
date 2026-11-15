@@ -19,6 +19,7 @@ struct ContentView: View {
     @AppStorage("expandApps") private var expandApps = true
     @AppStorage("expandProfiles") private var expandProfiles = true
     @AppStorage("allIncludesDefaults") private var allIncludesDefaults = false
+    @AppStorage("favoritesInLists") private var favoritesInLists = false
     private let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
     private var allItems: [URL] { installedApps + profiles.map(\.url) }
@@ -42,11 +43,11 @@ struct ContentView: View {
                     }
                 }
                 Section("Apps", isExpanded: $expandApps) {
-                    ForEach(installedApps.filter { !isFavorite($0) }, id: \.path) { row($0) }
+                    ForEach(installedApps.filter { favoritesInLists || !isFavorite($0) }, id: \.path) { row($0) }
                 }
                 Section("Profiles", isExpanded: $expandProfiles) {
                     if profiles.isEmpty { Text("No profiles yet. Add one below.").foregroundStyle(.secondary) }
-                    ForEach(profiles.filter { !isFavorite($0.url) }) { row($0.url) }
+                    ForEach(profiles.filter { favoritesInLists || !isFavorite($0.url) }) { row($0.url) }
                 }
             }
             .listStyle(.sidebar)
@@ -85,7 +86,10 @@ struct ContentView: View {
             Image(nsImage: NSImage(contentsOf: url.appendingPathComponent("Contents/Resources/profile.icns")) ?? NSWorkspace.shared.icon(forFile: url.path))
                 .resizable().frame(width: 32, height: 32)
             VStack(alignment: .leading) {
-                Text(profile?.name ?? url.deletingPathExtension().lastPathComponent)
+                HStack(spacing: 4) {
+                    Text(profile?.name ?? url.deletingPathExtension().lastPathComponent)
+                    if favoritesInLists && isFavorite(url) { Image(systemName: "star.fill").font(.caption).foregroundStyle(.yellow).accessibilityLabel("Favorite") }
+                }
                 Text(profile.map { $0.source.deletingPathExtension().lastPathComponent + ($0.isCurrent ? "" : " · update pending") + ($0.pending == nil ? "" : " · changes apply on restart") } ?? "Default profile")
                     .font(.caption).foregroundStyle(.secondary)
             }
@@ -286,6 +290,7 @@ struct ProfileEditor: View {
 
 struct SettingsView: View {
     @AppStorage("allIncludesDefaults") private var allIncludesDefaults = false
+    @AppStorage("favoritesInLists") private var favoritesInLists = false
     @State private var openAtLogin = SMAppService.mainApp.status == .enabled
     @State private var error: String?
 
@@ -297,6 +302,7 @@ struct SettingsView: View {
                     catch { self.error = error.localizedDescription; openAtLogin = SMAppService.mainApp.status == .enabled }
                 }
             Toggle("Include default Claude and ChatGPT in Launch All / Close All", isOn: $allIncludesDefaults)
+            Toggle("Also show Favorites in their Apps / Profiles section", isOn: $favoritesInLists)
             if let error { Text(error).foregroundStyle(.red).font(.caption) }
         }
         .padding(20)

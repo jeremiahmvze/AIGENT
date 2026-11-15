@@ -42,8 +42,8 @@ from what's already installed (desktop sign-in, Claude Code tab sessions, local 
 ## Fixed
 - Profiles couldn't reach the local network ("No route to host", no Local Network prompt) because
   cloned binaries shared the original app's UUID. Each profile now gets its own (issue #1).
+- Profile icons looked framed/grey in Tinted or Clear icon mode: they were built from the already-styled
+  icon, which macOS then styled again. They now use the app's original .icns.
 
 ## Known issues
-- Profile icons use the macOS app-icon style active when they were built (e.g. Tinted/Clear).
-  After changing the system icon style, Rebuild profiles to refresh them.
 - Each profile launch leaves a harmless, invisible LaunchServices entry for its startup script.

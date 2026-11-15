@@ -104,6 +104,7 @@ struct ContentView: View {
         .padding(.vertical, 2)
         .contextMenu {
             Button(isFavorite(url) ? "Remove from Favorites" : "Add to Favorites") { toggleFavorite(url) }
+            if isOn { Button("Force Quit") { isRunning(url)?.forceTerminate() } }
             if let p = profile {
                 Divider()
                 Button("Edit Name & Icon…") { editing = p }

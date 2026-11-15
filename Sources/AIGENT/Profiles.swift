@@ -88,7 +88,11 @@ extension NSColor {
 /// Everything stays inside the standard icon shape (824 pt tile in a 1024 canvas); anything sticking out
 /// makes macOS treat it as a legacy icon and shrink it into a grey frame.
 func renderIcon(source: URL, look: Look) -> NSImage {
-    let base = look.imagePath.flatMap { NSImage(contentsOfFile: $0) } ?? NSWorkspace.shared.icon(forFile: source.path)
+    // The app's own .icns, not NSWorkspace's icon: that one is pre-styled (Tinted/Clear) and macOS styles it again.
+    let icns = (Bundle(url: source)?.object(forInfoDictionaryKey: "CFBundleIconFile") as? String).map {
+        source.appendingPathComponent("Contents/Resources/\($0.hasSuffix(".icns") ? $0 : $0 + ".icns")") }
+    let base = look.imagePath.flatMap { NSImage(contentsOfFile: $0) } ?? icns.flatMap { NSImage(contentsOf: $0) }
+        ?? NSWorkspace.shared.icon(forFile: source.path)
     return NSImage(size: NSSize(width: 1024, height: 1024), flipped: false) { rect in
         if look.framed {
             // Drawn ourselves (not left to macOS) so it looks the same on every macOS version.

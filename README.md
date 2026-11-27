@@ -1,6 +1,6 @@
 # AIGENT (beta)
 
-A small and completely vibe-coded macOS app for running several separately signed-in copies of **Claude** and **ChatGPT** (more OTW)
+A small and completely vibe-coded macOS and Windows app for running several separately signed-in copies of **Claude** and **ChatGPT** (more OTW)
 desktop at the same time. Each copy ("profile") is a real app with its own Dock icon, name,
 windows and sign-in. No overlays or borders, and no extra Dock icons.
 
@@ -32,6 +32,32 @@ each rebuild. To avoid that, create a self-signed **Code Signing** certificate n
 `AI Launcher Local` in Keychain Access (Certificate Assistant → Create a Certificate). Profiles
 and local builds use it automatically. Don't use that certificate for builds you share, because
 it embeds the details you entered.
+
+## Windows
+Requires Windows 10 or 11 (x64), plus Claude and/or ChatGPT for Windows.
+
+1. Download `AIGENT-Setup-*.exe` from [Releases](../../releases) and run it. It installs for your
+   account only (no admin prompt) to `%LOCALAPPDATA%\Programs\AIGENT`.
+2. The installer isn't signed, so SmartScreen may warn. Click **More info → Run anyway**.
+
+On Windows a profile isn't a copy of the app. It's a Start Menu shortcut (in **AI Profiles**) that
+starts the installed app with its own `--user-data-dir`, plus its own icon and taskbar button.
+The app's own updates apply to every profile, so there's nothing to rebuild. Uninstalling keeps
+sign-ins and data (`%APPDATA%\AIGENT`, `%LOCALAPPDATA%\AIGENT`).
+
+Windows caveats:
+- Emoji badges are drawn in one colour (white).
+- Store (MSIX) installs: Windows may redirect their data folders, and the Claude Code config folder
+  (`CLAUDE_CONFIG_DIR`) isn't passed to them.
+- After an app restarts itself to update, a profile can reopen as the default app. Launch it again
+  from AIGENT.
+- ChatGPT for Windows honouring `--user-data-dir` is unverified.
+
+Build from source (on Windows, or on a Mac with `brew install mingw-w64 makensis`):
+
+    cd windows
+    cargo run -- --self-test   # quick check
+    ./build.sh                 # build/windows/AIGENT.exe and build/AIGENT-Setup-<version>.exe
 
 ## Notes
 - This is an unofficial tool, not affiliated with Anthropic or OpenAI.

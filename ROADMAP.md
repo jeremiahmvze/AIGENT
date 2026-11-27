@@ -13,6 +13,8 @@
 - [x] Per-row Restart (running) and Update (source app updated) buttons.
 - [x] Profiles rebuild themselves after the source app updates.
 - [x] Settings: Open at Login, include default apps in Launch All / Close All.
+- [x] Windows port (`windows/`, Rust + egui) with a per-user installer: profiles as Start Menu
+      shortcuts with their own icon, taskbar button and data folder; same features as the Mac app.
 
 ## Planned
 ### Import existing data
@@ -36,6 +38,8 @@ from what's already installed (desktop sign-in, Claude Code tab sessions, local 
 - Show only services that are installed (already how Claude/ChatGPT work).
 
 ## Ideas
+- Signed Windows installer, so SmartScreen doesn't warn.
+- CI on `windows-latest` running `AIGENT.exe --self-test`.
 - Universal (Intel + Apple Silicon) release build.
 - Notarized release, so Gatekeeper doesn't warn.
 

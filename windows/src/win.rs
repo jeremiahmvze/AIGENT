@@ -203,13 +203,19 @@ fn alive(pid: u32) -> bool {
 
 // MARK: Taskbar identity
 
-/// A VT_LPWSTR value pointing at our own buffer (SetValue copies it, so no PropVariantClear).
+/// A VT_LPWSTR value. The string must be CoTaskMemAlloc'd and freed with PropVariantClear:
+/// pointing at a Rust-owned buffer corrupted the heap (0xC0000374) when writing shortcuts.
 unsafe fn set_prop(store: &IPropertyStore, key: &PROPERTYKEY, value: &str) -> windows::core::Result<()> {
-    let mut wide: Vec<u16> = value.encode_utf16().chain([0]).collect();
+    let wide: Vec<u16> = value.encode_utf16().chain([0]).collect();
+    let buf = CoTaskMemAlloc(wide.len() * 2) as *mut u16;
+    if buf.is_null() { return Err(E_OUTOFMEMORY.into()) }
+    std::ptr::copy_nonoverlapping(wide.as_ptr(), buf, wide.len());
     let mut v = PROPVARIANT::default();
     (*v.Anonymous.Anonymous).vt = windows::Win32::System::Variant::VT_LPWSTR;
-    (*v.Anonymous.Anonymous).Anonymous.pwszVal = PWSTR(wide.as_mut_ptr());
-    store.SetValue(key, &v)
+    (*v.Anonymous.Anonymous).Anonymous.pwszVal = PWSTR(buf);
+    let r = store.SetValue(key, &v);
+    let _ = PropVariantClear(&mut v);
+    r
 }
 
 /// Gives a profile's windows their own taskbar button: its AppUserModelID (same as its Start Menu shortcut,
